@@ -11,6 +11,6 @@ import vue from '@vitejs/plugin-vue'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: './',
+  base: './pod_style_2d',
   plugins: [vue()],
 })
