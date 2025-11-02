@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>带坐标和尺寸控制的贴图工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
+    <style>
+        #canvas { border: 1px solid #000; }
+        .controls { margin: 10px 0; display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: center; }
+        .control-group { grid-column: 1 / 3; display: flex; gap: 10px; flex-wrap: wrap; }
+        input[type="number"] { width: 100px; padding: 5px; }
+        button { padding: 6px 12px; cursor: pointer; }
+        .log { margin-top: 10px; padding: 10px; background: #f0f0f0; height: 100px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <label>底图:</label>
+        <input type="file" id="baseImg" accept="image/*">
+        
+        <label>贴图:</label>
+        <input type="file" id="overlayImg" accept="image/*">
+        
+        <label>贴图X坐标:</label>
+        <input type="number" id="x" value="50" min="0">
+        
+        <label>贴图Y坐标:</label>
+        <input type="number" id="y" value="50" min="0">
+        
+        <label>贴图宽度:</label>
+        <input type="number" id="width" value="100" min="1">
+        
+        <label>贴图高度:</label>
+        <input type="number" id="height" value="100" min="1">
+        
+        <div class="control-group">
+            <button onclick="addOverlay()">应用贴图</button>
+            <button onclick="clearCanvas()">清空画布</button>
+        </div>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+    <div class="log" id="log"></div>
+
+    <script>
+        const canvas = new fabric.Canvas('canvas');
+        let baseImageObj = null;
+        let overlayImageObj = null;
+        const logEl = document.getElementById('log');
+
+        // 日志输出
+        function log(msg) {
+            logEl.innerHTML += `[${new Date().toLocaleTimeString()}] ${msg}<br>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // 加载底图
+        document.getElementById('baseImg').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                fabric.Image.fromURL(event.target.result, function(img) {
+                    canvas.clear();
+                    canvas.setWidth(img.width);
+                    canvas.setHeight(img.height);
+                    baseImageObj = img;
+                    canvas.add(img);
+                    // 更新坐标最大值为底图尺寸
+                    document.getElementById('x').max = img.width;
+                    document.getElementById('y').max = img.height;
+                    log(`底图加载完成 (${img.width}×${img.height})`);
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 加载贴图并自动填充尺寸
+        document.getElementById('overlayImg').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const tempImg = new Image();
+                tempImg.onload = function() {
+                    // 自动填充贴图原始尺寸到输入框
+                    document.getElementById('width').value = tempImg.width;
+                    document.getElementById('height').value = tempImg.height;
+                    
+                    fabric.Image.fromURL(event.target.result, function(img) {
+                        overlayImageObj = img;
+                        log(`贴图加载完成 (${img.width}×${img.height})`);
+                    });
+                };
+                tempImg.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 应用贴图（使用输入的坐标和尺寸）
+        function addOverlay() {
+            if (!baseImageObj) {
+                log('请先加载底图');
+                return;
+            }
+            if (!overlayImageObj) {
+                log('请先加载贴图');
+                return;
+            }
+
+            // 获取输入的坐标和尺寸
+            const x = parseInt(document.getElementById('x').value) || 0;
+            const y = parseInt(document.getElementById('y').value) || 0;
+            const width = parseInt(document.getElementById('width').value) || 100;
+            const height = parseInt(document.getElementById('height').value) || 100;
+
+            // 创建贴图并应用设置
+            const newOverlay = new fabric.Image(overlayImageObj._element, {
+                left: x,
+                top: y,
+                width: width,
+                height: height,
+                scaleX: 1,
+                scaleY: 1,
+                opacity: 1
+            });
+
+            canvas.add(newOverlay);
+            canvas.bringToFront(newOverlay);
+            canvas.renderAll();
+            log(`贴图已添加 (位置: ${x},${y} 尺寸: ${width}×${height})`);
+        }
+
+        // 清空画布
+        function clearCanvas() {
+            canvas.clear();
+            baseImageObj = null;
+            overlayImageObj = null;
+            document.getElementById('baseImg').value = '';
+            document.getElementById('overlayImg').value = '';
+            log('画布已清空');
+        }
+    </script>
+</body>
+</html>
