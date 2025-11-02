@@ -1,0 +1,33 @@
+# .github/workflows/deploy.yml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]  # 监听 main 分支的推送
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20  # 对应你的 Node 版本
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Clean and build
+        run: |
+          rm -rf dist  # 清除旧构建产物
+          rm -rf node_modules/.vite  # 清除缓存
+          npm run build  # 构建
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist  # 部署 dist 目录
